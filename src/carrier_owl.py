@@ -89,7 +89,7 @@ def send2app(text: str, slack_id: str, line_token: str) -> None:
 
 def notify(results: list, slack_id: str, line_token: str) -> None:
     # 通知
-    mention = '<@UHMA7FPDM>'
+    mention = config['mention']
     star = '*'*80
     today = datetime.date.today()
     n_articles = len(results)
