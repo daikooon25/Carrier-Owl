@@ -11,4 +11,4 @@ keywords:
 # 通知の閾値
 score_threshold: 0
 
-config: '<@UHMA7FPDM>'
+mention: '<@UHMA7FPDM>'
