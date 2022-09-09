@@ -6,9 +6,8 @@ keywords:
         quantum annealing: 1
         simulated annealing: 1
         combinatorial optimization: 1
-        quantum: 1
+        quantum machine learning: 1
+        quantum computing: 1
 
 # 通知の閾値
 score_threshold: 0
-
-mention: '<@UHMA7FPDM>'

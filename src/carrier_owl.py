@@ -44,14 +44,14 @@ def search_keyword(
         articles: list, keywords: dict, score_threshold: float
         ) -> list:
     results = []
-    
+
     # ヘッドレスモードでブラウザを起動
     options = Options()
     options.add_argument('--headless')
 
     # ブラウザーを起動
     driver = webdriver.Firefox(executable_path=GeckoDriverManager().install(), options=options)
-    
+
     for article in articles:
         url = article['arxiv_url']
         title = article['title']
@@ -67,7 +67,7 @@ def search_keyword(
                     url=url, title=title_trans, abstract=abstract_trans,
                     score=score, words=hit_keywords)
             results.append(result)
-    
+
     # ブラウザ停止
     driver.quit()
     return results
@@ -89,11 +89,11 @@ def send2app(text: str, slack_id: str, line_token: str) -> None:
 
 def notify(results: list, slack_id: str, line_token: str) -> None:
     # 通知
-    mention = config['mention']
+    mention = os.getenv("MENTION_USER")
     star = '*'*80
     today = datetime.date.today()
     n_articles = len(results)
-    text = f'{mention}\n {star}\n \t \t {today}\tnum of articles = {n_articles}\n{star}'
+    text = f'{mention}\n \t \t {today}\tnum of articles = {n_articles}\n{star}'
     send2app(text, slack_id, line_token)
     # descending
     for result in sorted(results, reverse=True, key=lambda x: x.score):
