@@ -15,6 +15,8 @@ import urllib.parse
 from dataclasses import dataclass
 import arxiv
 import requests
+
+from notion_client import Client
 # setting
 warnings.filterwarnings('ignore')
 
@@ -24,11 +26,11 @@ class Result:
     url: str
     title: str
     abstract: str
-    words: list
+    keywords: list
     score: float = 0.0
 
 
-def calc_score(abst: str, keywords: dict) -> (float, list):
+def calc_score(abst: str, keywords: dict):
     sum_score = 0.0
     hit_kwd_list = []
 
@@ -65,7 +67,7 @@ def search_keyword(
             # abstract_trans = '\n'.join(abstract_trans)
             result = Result(
                     url=url, title=title_trans, abstract=abstract_trans,
-                    score=score, words=hit_keywords)
+                    score=score, keywords=hit_keywords)
             results.append(result)
 
     # ブラウザ停止
@@ -87,38 +89,47 @@ def send2app(text: str, slack_id: str, line_token: str) -> None:
         requests.post(line_notify_api, headers=headers, data=data)
 
 
-def notify(results: list, slack_id: str, line_token: str) -> None:
-    # 通知
-    mention = os.getenv("MENTION_USER")
-    star = '*'*80
-    today = datetime.date.today()
-    n_articles = len(results)
-    text = f'{mention}\n \t \t {today}\tnum of articles = {n_articles}\n{star}'
-    send2app(text, slack_id, line_token)
-    # descending
+def post2notion(results: list, dt_now: datetime.datetime, notion_token: str, notion_database_id: str) -> None:
+    notion = Client(auth=notion_token)
+    created_at = dt_now.strftime('%Y-%m-%d')
     for result in sorted(results, reverse=True, key=lambda x: x.score):
-        url = result.url
         title = result.title
+        keywords = result.keywords
         abstract = result.abstract
-        word = result.words
+        url = result.url
         score = result.score
 
-        text = f'\n score: `{score}`'\
-               f'\n hit keywords: `{word}`'\
-               f'\n url: {url}'\
-               f'\n title:    {title}'\
-               f'\n abstract:'\
-               f'\n \t {abstract}'\
-               f'\n {star}'
-
-        send2app(text, slack_id, line_token)
+        notion.pages.create(**{
+            'parent': {
+                'database_id': notion_database_id
+            },
+            'properties': {
+                'Title': {
+                    'title': [{'text': {'content': title}}]
+                },
+                'Keywords': {
+                    'multi_select': [{'name': word} for word in keywords]
+                },
+                'Abstract': {
+                    'rich_text': [{'type': 'text', 'text': {'content': abstract}}]
+                },
+                'URL': {
+                    'url': url
+                },
+                'Score': {
+                    'number': score
+                },
+                'Created at': {
+                    'date': {'start': created_at}
+                }
+            }
+        })
 
 
 def get_translated_text(from_lang: str, to_lang: str, from_text: str, driver) -> str:
     '''
     https://qiita.com/fujino-fpu/items/e94d4ff9e7a5784b2987
     '''
-
     sleep_time = 1
 
     # urlencode
@@ -144,6 +155,7 @@ def get_translated_text(from_lang: str, to_lang: str, from_text: str, driver) ->
         return urllib.parse.unquote(from_text)
     return to_text
 
+
 def get_text_from_driver(driver) -> str:
     try:
         elem = driver.find_element_by_class_name('lmt__translations_as_text__text_btn')
@@ -151,6 +163,7 @@ def get_text_from_driver(driver) -> str:
         return None
     text = elem.get_attribute('innerHTML')
     return text
+
 
 def get_text_from_page_source(html: str) -> str:
     soup = BeautifulSoup(html, features='lxml')
@@ -173,6 +186,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--slack_id', default=None)
     parser.add_argument('--line_token', default=None)
+    parser.add_argument('--notion_token', default=None)
+    parser.add_argument('--notion_database_id', default=None)
     args = parser.parse_args()
 
     config = get_config()
@@ -180,22 +195,28 @@ def main():
     keywords = config['keywords']
     score_threshold = float(config['score_threshold'])
 
-    day_before_yesterday = datetime.datetime.today() - datetime.timedelta(days=2)
+    dt_now = datetime.datetime.now()
+    day_before_yesterday = dt_now - datetime.timedelta(days=2)
     day_before_yesterday_str = day_before_yesterday.strftime('%Y%m%d')
     # datetime format YYYYMMDDHHMMSS
     arxiv_query = f'({subject}) AND ' \
-                  f'submittedDate:' \
-                  f'[{day_before_yesterday_str}000000 TO {day_before_yesterday_str}235959]'
+                    f'submittedDate:' \
+                    f'[{day_before_yesterday_str}000000 TO {day_before_yesterday_str}235959]'
     articles = arxiv.query(query=arxiv_query,
-                           max_results=1000,
-                           sort_by='submittedDate',
-                           iterative=False)
+                            max_results=1000,
+                            sort_by='submittedDate',
+                            iterative=False)
     results = search_keyword(articles, keywords, score_threshold)
 
     slack_id = os.getenv("SLACK_ID") or args.slack_id
     line_token = os.getenv("LINE_TOKEN") or args.line_token
-    notify(results, slack_id, line_token)
 
+    text = f'{dt_now.strftime("%Y-%m-%d")}\tNum of Articles = {len(results)}'
+    send2app(text, slack_id, line_token)
+
+    notion_token = os.getenv("NOTION_TOKEN") or args.notion_token
+    notion_database_id = os.getenv("NOTION_DATABASE_ID") or args.notion_database_id
+    post2notion(results, dt_now, notion_token, notion_database_id)
 
 if __name__ == "__main__":
     main()
