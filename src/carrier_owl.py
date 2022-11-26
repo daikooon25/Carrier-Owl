@@ -211,7 +211,7 @@ def main():
     slack_id = os.getenv("SLACK_ID") or args.slack_id
     line_token = os.getenv("LINE_TOKEN") or args.line_token
 
-    text = f'{dt_now.strftime("%Y-%m-%d")}\tNum of Articles = {len(results)}'
+    text = f'\n**{dt_now.strftime("%Y-%m-%d")}**\nNum of Articles = {len(results)}'
     send2app(text, slack_id, line_token)
 
     notion_token = os.getenv("NOTION_TOKEN") or args.notion_token
