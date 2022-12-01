@@ -52,7 +52,7 @@ def search_keyword(
     options.add_argument('--headless')
 
     # ブラウザーを起動
-    driver = webdriver.Firefox(executable_path=ChromeDriverManager().install(), options=options)
+    driver = webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=options)
 
     for article in articles:
         url = article['arxiv_url']
