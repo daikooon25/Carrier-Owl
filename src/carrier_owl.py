@@ -100,7 +100,7 @@ def post2notion(results: list, dt_now: datetime.datetime, notion_token: str, not
             'Abstract': result.abstract,
             'URL': result.url,
             'Score': result.score,
-            'Created_at': created_at
+            'Created at': created_at
         }
         notion.add_page_to_database(database_id=notion_database_id, prop_name_and_value=add_items)
 
