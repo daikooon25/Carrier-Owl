@@ -1,10 +1,11 @@
 anyio==3.6.2
 arxiv==0.5.4
+attrs==21.2.0
 autopep8==1.7.0
 beautifulsoup4==4.11.1
 certifi==2022.6.15
 chardet==4.0.0
-charset-normalizer==2.1.1
+charset-normalizer==2.0.12
 colorama==0.4.4
 configparser==5.0.2
 crayons==0.4.0
@@ -16,9 +17,10 @@ idna==3.3
 lxml==4.9.1
 notion-client==1.0.0
 pycodestyle==2.9.1
-python-dotenv==0.21.0
+python-dotenv==0.18.0
+python-notion @ git+https://github.com/qlitre/python-notion.git@05a92b7a20754c007a703fa4ad9aa54344413bd1
 PyYAML==5.4.1
-requests==2.28.1
+requests==2.26.0
 rfc3986==1.5.0
 selenium==3.141.0
 sgmllib3k==1.0.0

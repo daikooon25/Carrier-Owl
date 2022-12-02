@@ -1,6 +1,6 @@
-from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.firefox import GeckoDriverManager
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.firefox.options import Options
 from selenium.common.exceptions import NoSuchElementException
 import os
 import time
@@ -16,7 +16,7 @@ from dataclasses import dataclass
 import arxiv
 import requests
 
-from notion_client import Client
+from notion import NotionClient
 # setting
 warnings.filterwarnings('ignore')
 
@@ -52,7 +52,7 @@ def search_keyword(
     options.add_argument('--headless')
 
     # ブラウザーを起動
-    driver = webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=options)
+    driver = webdriver.Firefox(executable_path=GeckoDriverManager().install(), options=options)
 
     for article in articles:
         url = article['arxiv_url']
@@ -90,40 +90,19 @@ def send2app(text: str, slack_id: str, line_token: str) -> None:
 
 
 def post2notion(results: list, dt_now: datetime.datetime, notion_token: str, notion_database_id: str) -> None:
-    notion = Client(auth=notion_token)
+    notion = NotionClient(notion_token)
     created_at = dt_now.strftime('%Y-%m-%d')
-    for result in sorted(results, reverse=True, key=lambda x: x.score):
-        title = result.title
-        keywords = result.keywords
-        abstract = result.abstract
-        url = result.url
-        score = result.score
 
-        notion.pages.create(**{
-            'parent': {
-                'database_id': notion_database_id
-            },
-            'properties': {
-                'Title': {
-                    'title': [{'text': {'content': title}}]
-                },
-                'Keywords': {
-                    'multi_select': [{'name': word} for word in keywords]
-                },
-                'Abstract': {
-                    'rich_text': [{'type': 'text', 'text': {'content': abstract}}]
-                },
-                'URL': {
-                    'url': url
-                },
-                'Score': {
-                    'number': score
-                },
-                'Created at': {
-                    'date': {'start': created_at}
-                }
-            }
-        })
+    for result in sorted(results, reverse=True, key=lambda x: x.score):
+        add_items = {
+            'Title': result.title,
+            'Keywords': ','.join(result.keywords),
+            'Abstract': result.abstract,
+            'URL': result.url,
+            'Score': result.score,
+            'Created_at': created_at
+        }
+        notion.add_page_to_database(database_id=notion_database_id, prop_name_and_value=add_items)
 
 
 def get_translated_text(from_lang: str, to_lang: str, from_text: str, driver) -> str:
